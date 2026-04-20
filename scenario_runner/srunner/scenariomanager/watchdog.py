@@ -71,6 +71,7 @@ class Watchdog(object):
         """
         self._timer.cancel()
 
+
     def get_status(self):
         """
         returns:

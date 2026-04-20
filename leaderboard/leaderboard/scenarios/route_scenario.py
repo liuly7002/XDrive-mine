@@ -50,6 +50,15 @@ DATA_COLLECTION = os.environ.get('DATA_COLLECTION', None)
 
 ROUTESCENARIO = ["RouteScenario"]
 
+
+CUSTOM_EGO_VEHICLE = 'vehicle.cat_xin.cat_xin'
+
+CUSTOM_BACKGROUND_VEHICLES = [
+    'vehicle.190.190',
+    'vehicle.cam.cam',
+    'vehicle.cat_xin.cat_xin',
+]
+
 SECONDS_GIVEN_PER_METERS = 0.8 # for timeout
 # SECONDS_GIVEN_PER_METERS = 2 # for timeout
 INITIAL_SECONDS_DELAY = 5.0
@@ -251,7 +260,7 @@ class RouteScenario(BasicScenario):
 		elevate_transform = self.route[0][0]
 		elevate_transform.location.z += 0.5
 
-		ego_vehicle = CarlaDataProvider.request_new_actor('vehicle.lincoln.mkz2017',
+		ego_vehicle = CarlaDataProvider.request_new_actor(CUSTOM_EGO_VEHICLE,
 														  elevate_transform,
 														  rolename='hero')
 
@@ -417,7 +426,7 @@ class RouteScenario(BasicScenario):
 			scenario_configuration.other_actors = list_of_actor_conf_instances
 			scenario_configuration.trigger_points = [egoactor_trigger_position]
 			scenario_configuration.subtype = definition['scenario_type']
-			scenario_configuration.ego_vehicles = [ActorConfigurationData('vehicle.lincoln.mkz2017',
+			scenario_configuration.ego_vehicles = [ActorConfigurationData(CUSTOM_EGO_VEHICLE,
 																		  ego_vehicle.get_transform(),
 																		  'hero')]
 			route_var_name = "ScenarioRouteNumber{}".format(scenario_number)
@@ -470,37 +479,126 @@ class RouteScenario(BasicScenario):
 
 	# pylint: enable=no-self-use
 
+	# def _initialize_actors(self, config):
+	# 	"""
+	# 	Set other_actors to the superset of all scenario actors
+	# 	"""
+	# 	# Create the background activity of the route
+	# 	if int(os.environ.get('DATAGEN')) == 1:
+	# 		town_amount = {
+	# 		'Town01': 120,
+	# 		'Town02': 100,
+	# 		'Town03': 120,
+	# 		'Town04': 200,
+	# 		'Town05': 120,
+	# 		'Town06': 150,
+	# 		'Town07': 110,
+	# 		'Town08': 180,
+	# 		'Town09': 300,
+	# 		'Town10HD': 120, # town10 doesn't load properly for some reason
+	# 	}
+			
+	# 		default_amount = 80   # 自定义地图的默认背景车数量
+	# 		base_amount = town_amount.get(config.town, default_amount)
+	# 		if base_amount > 0:
+	# 			amount = random.randint(base_amount, 2 * base_amount)
+	# 		else:
+	# 			amount = 0
+	# 	else:
+	# 		amount = 500
+	# 	#amount = town_amount[config.town] if config.town in town_amount else 0
+
+	# 	new_actors = CarlaDataProvider.request_new_batch_actors('vehicle.*',
+	# 															amount,
+	# 															carla.Transform(),
+	# 															autopilot=True,
+	# 															random_location=True,
+	# 															rolename='background')
+	# 	if new_actors is None:
+	# 		raise Exception("Error: Unable to add the background activity, all spawn points were occupied")
+
+	# 	for _actor in new_actors:
+	# 		self.other_actors.append(_actor)
+
+	# 	# Add all the actors of the specific scenarios to self.other_actors
+	# 	for scenario in self.list_scenarios:
+	# 		self.other_actors.extend(scenario.other_actors)
+
 	def _initialize_actors(self, config):
 		"""
 		Set other_actors to the superset of all scenario actors
 		"""
 		# Create the background activity of the route
-		town_amount = {
-			'Town01': 120,
-			'Town02': 100,
-			'Town03': 120,
-			'Town04': 200,
-			'Town05': 120,
-			'Town06': 150,
-			'Town07': 110,
-			'Town08': 180,
-			'Town09': 300,
-			'Town10HD': 120, # town10 doesn't load properly for some reason
-		}
+		if int(os.environ.get('DATAGEN')) == 1:
+			town_amount = {
+				'Town01': 120,
+				'Town02': 100,
+				'Town03': 120,
+				'Town04': 200,
+				'Town05': 120,
+				'Town06': 150,
+				'Town07': 110,
+				'Town08': 180,
+				'Town09': 300,
+				'Town10HD': 120,
+				'0325_1': 15,
+				'0325_2': 15,
+			}
 
-		amount = town_amount[config.town] if config.town in town_amount else 0
+			default_amount = 10   # 自定义地图默认背景车数量
+			base_amount = town_amount.get(config.town, default_amount)
 
-		new_actors = CarlaDataProvider.request_new_batch_actors('vehicle.*',
-																amount,
-																carla.Transform(),
-																autopilot=True,
-																random_location=True,
-																rolename='background')
-		if new_actors is None:
-			raise Exception("Error: Unable to add the background activity, all spawn points were occupied")
+			if base_amount > 0:
+				amount = random.randint(base_amount, 2 * base_amount)
+			else:
+				amount = 0
+		else:
+			amount = 500
 
-		for _actor in new_actors:
-			self.other_actors.append(_actor)
+		world = CarlaDataProvider.get_world()
+		blueprint_library = world.get_blueprint_library()
+		spawn_points = CarlaDataProvider.get_map().get_spawn_points()
+
+		available_custom_bps = []
+		for bp_id in CUSTOM_BACKGROUND_VEHICLES:
+			try:
+				bp = blueprint_library.find(bp_id)
+				available_custom_bps.append(bp)
+			except Exception:
+				print("Warning: blueprint not found -> {}".format(bp_id))
+
+		if not available_custom_bps:
+			raise Exception("No valid custom background vehicle blueprints found.")
+
+		random.shuffle(spawn_points)
+		spawned_count = 0
+
+		for spawn_point in spawn_points:
+			if spawned_count >= amount:
+				break
+
+			bp = random.choice(available_custom_bps)
+
+			try:
+				if bp.has_attribute('role_name'):
+					bp.set_attribute('role_name', 'background')
+			except Exception:
+				pass
+
+			try:
+				actor = world.try_spawn_actor(bp, spawn_point)
+				if actor is None:
+					continue
+
+				actor.set_autopilot(True)
+				self.other_actors.append(actor)
+				spawned_count += 1
+
+			except Exception as e:
+				print("Failed to spawn background actor: {}".format(e))
+				continue
+
+		print("Spawned {} custom background actors.".format(spawned_count))
 
 		# Add all the actors of the specific scenarios to self.other_actors
 		for scenario in self.list_scenarios:

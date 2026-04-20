@@ -203,7 +203,7 @@ class ROACHAgent(autonomous_agent.AutonomousAgent):
 		return [
 				{
 					'type': 'sensor.camera.rgb',
-					'x': -1.5, 'y': 0.0, 'z':2.0,
+					'x': 6, 'y': 0.0, 'z':6.9,
 					'roll': 0.0, 'pitch': 0.0, 'yaw': 0.0,
 					'width': 900, 'height': 256, 'fov': 100,
 					'id': 'rgb'

@@ -1,5 +1,5 @@
 #!/bin/bash
-export CARLA_ROOT=/home/liulei/ll/CARLA_0.9.10
+export CARLA_ROOT=/home/a/carla0.9.10_package/CARLA_0.9.10-dirty
 export CARLA_SERVER=${CARLA_ROOT}/CarlaUE4.sh
 export PYTHONPATH=$PYTHONPATH:${CARLA_ROOT}/PythonAPI
 export PYTHONPATH=$PYTHONPATH:${CARLA_ROOT}/PythonAPI/carla
@@ -20,15 +20,16 @@ export DATA_COLLECTION=True
 
 # Roach data collection
 #export ROUTES=leaderboard/data/TCP_training_routes/routes_town05_val.xml                  # 修改1: 路径
-export ROUTES=leaderboard/data/kuangshan_routes/route_from_spectator.xml                 # 修改1: 路径
+export ROUTES=/home/a/XDrive-mine-main/leaderboard/data/11.xml                # 修改1: 路径
 
 export TEAM_AGENT=team_code/roach_ap_agent.py
 export TEAM_CONFIG=roach/config/config_agent.yaml
 #export CHECKPOINT_ENDPOINT=data_collect_routes_town05_val_00_results.json                    # 修改2: 路径对应的结果文件  _original
-export CHECKPOINT_ENDPOINT=data_collect_routes_kuangshan_00_results.json                    # 修改2: 路径对应的结果文件  _original
-export SCENARIOS=leaderboard/data/scenarios/all_towns_traffic_scenarios.json
+export CHECKPOINT_ENDPOINT=data/data_collect_routes_kuangshan_00_results.json                    # 修改2: 路径对应的结果文件  _original
+export SCENARIOS=leaderboard/data/ceshi.json
 #export SAVE_PATH=data/town05_val_00/                                                         # 修改3: 收集数据存放的位置  _original
 export SAVE_PATH=data/kuangshan_00/                                                         # 修改3: 收集数据存放的位置  _original
+export DATAGEN=1
 
 
 
