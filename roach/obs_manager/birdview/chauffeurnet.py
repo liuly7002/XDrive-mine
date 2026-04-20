@@ -42,7 +42,7 @@ class ObsManager():
 	def __init__(self, obs_configs, criteria_stop=None):
 		self._width = int(obs_configs['width_in_pixels'])               # BEV的尺寸 192 单位: 像素
 		self._pixels_ev_to_bottom = obs_configs['pixels_ev_to_bottom']  # 40 自车mask中心点在BEV图像的的位置距离BEV图像底部的像素个数
-		self._pixels_per_meter = obs_configs['pixels_per_meter']        # 5 5像素/米
+		self._pixels_per_meter = obs_configs['pixels_per_meter']        # 2 2像素/米
 		self._history_idx = obs_configs['history_idx']
 		self._scale_bbox = obs_configs.get('scale_bbox', True)          # true 是否将b_box放大
 		self._scale_mask_col = obs_configs.get('scale_mask_col', 1.1)
@@ -76,7 +76,7 @@ class ObsManager():
 			# 校验地图像素与实际米数的比例关系，保证坐标转换的一致性。
 			assert np.isclose(self._pixels_per_meter, float(hf.attrs['pixels_per_meter']))
 
-		self._distance_threshold = np.ceil(self._width / self._pixels_per_meter)  # 192/5=39m  向上取整
+		self._distance_threshold = np.ceil(self._width / self._pixels_per_meter)  # 192/2=96m  向上取整
 
 	@staticmethod
 	def _get_stops(criteria_stop):
@@ -192,27 +192,6 @@ class ObsManager():
 		# 返回记录的所有 actor 的信息
 		return actor_positions
 
-	# def draw_sector_polar_points(self, image, center, num_layers=6, points_per_layer=18,
-    #                           sector_angle_deg=100, radius_step=50, start_angle_deg=-50,
-    #                           point_color=(0, 0, 255), point_radius=3):
-	# 	"""
-	# 	在BEV上绘制极点
-	# 	"""
-	#
-	# 	cx, cy = center
-	# 	polar_points = []
-	#
-	# 	for layer in range(1, num_layers + 1):
-	# 		r = layer * radius_step
-	# 		for i in range(points_per_layer):
-	# 			angle_deg = start_angle_deg + i * (sector_angle_deg / (points_per_layer - 1)) + 90
-	# 			angle_rad = math.radians(angle_deg)
-	# 			px = int(cx + r * math.cos(angle_rad))
-	# 			py = int(cy - r * math.sin(angle_rad))  # 图像坐标 y 轴向下，需取反
-	# 			polar_points.append((px, py))
-	# 			cv2.circle(image, (px, py), point_radius, point_color, -1)
-	#
-	# 	return polar_points  # 可用于后续 KDE
 
 	# 关键函数 有关BEV的处理都在这里
 	def get_observation(self, route_plan):
@@ -231,16 +210,84 @@ class ObsManager():
 				and abs(ev_loc.z - w.location.z) < 8.0  # 空间距离不超过阈值是周围车
 			c_ev = abs(ev_loc.x - w.location.x) < 1.0 and abs(ev_loc.y - w.location.y) < 1.0  # 距离过近说明是自车
 			return c_distance and (not c_ev)  # 所以返回的是True False, 在感兴趣区域内并且不是自车 也就是该实体是否在附近
-			
+
+		"""	
 		# 筛选出在感兴趣区域内的 vehicles 和 walkers
 		vehicle_bbox_list = self._world.get_level_bbs(carla.CityObjectLabel.Vehicles)   # 获取场景中所有车辆的bounding boxes
 		walker_bbox_list = self._world.get_level_bbs(carla.CityObjectLabel.Pedestrians) # 获取场景中所有行人的bounding boxes
+		# print(f"[DEBUG] total vehicle_bbox_list = {len(vehicle_bbox_list)}")
 		if self._scale_bbox:  # 执行 将在ev_loc周围的车辆和行人筛选出来
 			vehicles = self._get_surrounding_actors(vehicle_bbox_list, is_within_distance, 1.0)  # 筛选出周围感兴趣的车辆,vehicles=[[位置+朝向,占位符[0,0,0],尺寸一半],[位置+朝向,占位符[0,0,0],尺寸一半]...]
+			# print(f"[DEBUG] filtered vehicles = {len(vehicles)}")
 			walkers = self._get_surrounding_actors(walker_bbox_list, is_within_distance, 2.0)    # 筛选出周围感兴趣的行人，2代表将行人的真实尺寸的长和宽放大了2倍，为了看起来更大
 		else:
 			vehicles = self._get_surrounding_actors(vehicle_bbox_list, is_within_distance)
 			walkers = self._get_surrounding_actors(walker_bbox_list, is_within_distance)
+		"""
+
+
+		# ===================== 获取周围车辆/行人 =====================
+		all_vehicle_actors = self._world.get_actors().filter('*vehicle*')
+		all_walker_actors = self._world.get_actors().filter('*walker*')
+
+		# print(f"[DEBUG] world actor vehicles = {len(all_vehicle_actors)}")
+		# print(f"[DEBUG] world actor walkers = {len(all_walker_actors)}")
+
+		vehicles = []
+		walkers = []
+
+		for actor in all_vehicle_actors:
+			if actor.id == self._parent_actor.id:
+				continue  # 排除自车
+
+			actor_tf = actor.get_transform()
+			actor_loc = actor_tf.location
+
+			c_distance = abs(ev_loc.x - actor_loc.x) < self._distance_threshold and \
+						abs(ev_loc.y - actor_loc.y) < self._distance_threshold and \
+						abs(ev_loc.z - actor_loc.z) < 8.0
+
+			if c_distance:
+				bb = actor.bounding_box
+				bb_loc = bb.location
+				bb_ext = carla.Vector3D(bb.extent.x, bb.extent.y, bb.extent.z)
+
+				if self._scale_bbox:
+					bb_ext = bb_ext * 1.0
+					bb_ext.x = max(bb_ext.x, 0.8)
+					bb_ext.y = max(bb_ext.y, 0.8)
+
+				vehicles.append((actor_tf, bb_loc, bb_ext))
+
+		for actor in all_walker_actors:
+			actor_tf = actor.get_transform()
+			actor_loc = actor_tf.location
+
+			c_distance = abs(ev_loc.x - actor_loc.x) < self._distance_threshold and \
+						abs(ev_loc.y - actor_loc.y) < self._distance_threshold and \
+						abs(ev_loc.z - actor_loc.z) < 8.0
+
+			if c_distance:
+				bb = actor.bounding_box
+				bb_loc = bb.location
+				bb_ext = carla.Vector3D(bb.extent.x, bb.extent.y, bb.extent.z)
+
+				if self._scale_bbox:
+					bb_ext = bb_ext * 2.0
+					bb_ext.x = max(bb_ext.x, 0.8)
+					bb_ext.y = max(bb_ext.y, 0.8)
+
+				walkers.append((actor_tf, bb_loc, bb_ext))
+
+		# print(f"[DEBUG] filtered vehicles = {len(vehicles)}")
+		# print(f"[DEBUG] filtered walkers = {len(walkers)}")
+
+
+
+
+
+
+
 
 		tl_green = TrafficLightHandler.get_stopline_vtx(ev_loc, 0)  # 绿灯 [carla.Location(x1, y1, z1), carla.Location(x2, y2, z2), ...] 点表示在 Carla 世界坐标系下的停车线（Stopline）顶点坐标
 		tl_yellow = TrafficLightHandler.get_stopline_vtx(ev_loc, 1) # 黄灯 [carla.Location(x1, y1, z1), carla.Location(x2, y2, z2), ...] 点表示在 Carla 世界坐标系下的停车线（Stopline）顶点坐标

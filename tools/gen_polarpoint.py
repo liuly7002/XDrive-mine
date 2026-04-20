@@ -27,8 +27,8 @@ SaveImage = True        # 是否保存带有极点表示的BEV图
 SaveJson  = True        # 是否保存极点标签为.json文件
 
 # 本地
-data_root = "/home/liulei/ll/PPBEV_ll/data"
-root_dirs  = ["/home/liulei/ll/PPBEV_ll/data/town05_val_00"]   # ⚠️ 修改: 需要处理的文件夹(每次修改这里)
+data_root = "/home/liulei/ll/XDrive-mine/data"
+root_dirs  = ["/home/liulei/ll/XDrive-mine/data/kuangshan_00"]   # ⚠️ 修改: 需要处理的文件夹(每次修改这里)
 # 服务器
 # data_root = "/home/kemove/ll/PPBEV_ll/data"
 # root_dirs = [                                                   # ⚠️ 修改: 需要处理的文件夹(每次修改这里)
@@ -98,10 +98,10 @@ def generate_multi_fov_poles_angle_focus(center,
             u = np.sign(u) * (np.abs(u) ** angle_focus_factor)
             angles = np.deg2rad(u * (fov / 2.0))
         elif focus_mode == "absolute":
-            focus_angle = min(focus_angle_abs, fov/2)                  # 定义"聚焦角度"范围
-            u = np.linspace(-1, 1, points_per_layer)   # 生成[-1,1]的均匀采样序列,长度为points_per_layer
-            u = np.sign(u) * (np.abs(u) ** angle_focus_factor)         # 对序列u进行指数变换,使得靠近0(前方中心)的点更密集,边缘更稀疏
-            angles = np.deg2rad(u * focus_angle)                       # 将归一化后的u映射到实际角度范围[-focus_angle,focus_angle],此时只覆盖聚焦角度区域
+            focus_angle = min(focus_angle_abs, fov/2)            # 定义"聚焦角度"范围
+            u = np.linspace(-1, 1, points_per_layer)             # 生成[-1,1]的均匀采样序列,长度为points_per_layer
+            u = np.sign(u) * (np.abs(u) ** angle_focus_factor)   # 对序列u进行指数变换,使得靠近0(前方中心)的点更密集,边缘更稀疏
+            angles = np.deg2rad(u * focus_angle)                 # 将归一化后的u映射到实际角度范围[-focus_angle,focus_angle],此时只覆盖聚焦角度区域
 
             # 如果 FOV 比聚焦角度更大，需要把聚焦区域外的角度"扩展"到整个 FOV
             # 超出聚焦角度指数扩展到 FOV 边界
@@ -400,7 +400,7 @@ def process_one(front_img_path, vehicles_info, ego_pos=(96, 152), ego_yaw=0.0, s
             # -----------------------------
             # 1) BEV 的几何参数（和 ObsManager 一致）
             # -----------------------------
-            PIXELS_PER_METER = 5.0          # self._pixels_per_meter
+            PIXELS_PER_METER = 2.0          # self._pixels_per_meter
             BEV_WIDTH = 192                 # self._width
             PIXELS_EV_TO_BOTTOM = 40        # self._pixels_ev_to_bottom
 
@@ -525,7 +525,8 @@ if __name__ == "__main__":
     else:
         for root_dir in root_dirs:
             print(f"========== 正在处理 root_dir = {root_dir} ==========")
-            data_paths = glob.glob(os.path.join(root_dir, "routes_*", "packed_data.npy"))  # root_dir根目录下每个子文件夹下的packed_data.npy文件的全局路径
+            # data_paths = glob.glob(os.path.join(root_dir, "routes_*", "packed_data.npy"))  # root_dir根目录下每个子文件夹下的packed_data.npy文件的全局路径
+            data_paths = glob.glob(os.path.join(root_dir, "*", "packed_data.npy"))
 
             for data_path in data_paths:
                 data = np.load(data_path, allow_pickle=True).item()

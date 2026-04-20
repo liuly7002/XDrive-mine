@@ -30,13 +30,13 @@ def remove_files(root, index, items={"bev": ".png", "meta": ".json", "rgb": ".pn
 
 
 if __name__ == '__main__':
-    routes_type = ["val_00"]    # ⚠️ 修改1
-    towns = ["town05"]       # ⚠️ 修改2
+    routes_type = ["00"]        # ⚠️ 修改1
+    towns = ["kuangshan"]       # ⚠️ 修改2
 
-    result_path = "/home/liulei/ll/PPBEV_ll"
+    result_path = "/home/liulei/ll/XDrive-mine/data"
     result_pattern = "data_collect_routes_{}_{}_results.json"  # town, type
 
-    data_path = "/home/liulei/ll/PPBEV_ll/data"
+    data_path = "/home/liulei/ll/XDrive-mine/data"
     data_pattern = "{}_{}"  # town, type
 
     for type in routes_type:
@@ -45,7 +45,7 @@ if __name__ == '__main__':
             result_file = result_pattern.format(town, type)   # data_collect_routes_town01_addition_results.json
             data_folder = data_pattern.format(town, type)     # town01_addition
             data_folder = os.path.join(data_path, data_folder)      # /home/liulei/ll/PPBEV_ll/data/town01_addition
-            sub_folders = os.listdir(data_folder)
+            sub_folders = os.listdir(data_folder) 
             sub_folders = sorted(list(sub_folders))
 
             # read the record of each route

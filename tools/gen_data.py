@@ -15,7 +15,7 @@ import tqdm
 
 
 # 本地
-data_path = "/home/liulei/ll/PPBEV_ll/data/town05_val_00"  # ⚠️ 修改: CARLA 数据集的根目录，每个 route 在该路径下一个子文件夹中。
+data_path = "/home/liulei/ll/XDrive-mine/data/kuangshan_00"  # ⚠️ 修改: CARLA 数据集的根目录，每个 route 在该路径下一个子文件夹中。
 # 服务器
 # data_path = "/home/kemove/ll/PPBEV_ll/data/town01_original"  # ⚠️ 修改: CARLA 数据集的根目录，每个 route 在该路径下一个子文件夹中。
 
@@ -328,7 +328,9 @@ if __name__ == '__main__':
     """
     1. 先生成每个子文件夹(也就是每条route)下的packed_data.npy
     """
-    route_folders = [f for f in os.listdir(data_path) if f.startswith("routes_")]
+    # route_folders = [f for f in os.listdir(data_path) if f.startswith("routes_")]
+    route_folders = sorted([f for f in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, f))])
+    # print("Found route folders:", route_folders)
 
     route_folders = sorted(route_folders)
 

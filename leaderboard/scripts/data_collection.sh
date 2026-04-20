@@ -1,5 +1,5 @@
 #!/bin/bash
-export CARLA_ROOT=/home/a/carla0.9.10_package/CARLA_0.9.10-dirty
+export CARLA_ROOT=/home/liulei/ll/CARLA_Shipping_0.9.10-dirty/LinuxNoEditor/
 export CARLA_SERVER=${CARLA_ROOT}/CarlaUE4.sh
 export PYTHONPATH=$PYTHONPATH:${CARLA_ROOT}/PythonAPI
 export PYTHONPATH=$PYTHONPATH:${CARLA_ROOT}/PythonAPI/carla
@@ -20,7 +20,7 @@ export DATA_COLLECTION=True
 
 # Roach data collection
 #export ROUTES=leaderboard/data/TCP_training_routes/routes_town05_val.xml                  # 修改1: 路径
-export ROUTES=/home/a/XDrive-mine-main/leaderboard/data/11.xml                # 修改1: 路径
+export ROUTES=/home/liulei/ll/XDrive-mine/leaderboard/data/11.xml                # 修改1: 路径
 
 export TEAM_AGENT=team_code/roach_ap_agent.py
 export TEAM_CONFIG=roach/config/config_agent.yaml
