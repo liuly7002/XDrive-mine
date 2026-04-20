@@ -48,7 +48,8 @@ obs_configs:
     module: birdview.chauffeurnet
     width_in_pixels: 192
     pixels_ev_to_bottom: 40
-    pixels_per_meter: 5.0
+    # pixels_per_meter: 5.0
+    pixels_per_meter: 2.0
     history_idx:
     - -16
     - -11
