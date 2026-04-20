@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<routes>
+  <route id="0" town="kuangshan">
+    <weather id="WetSunset" cloudiness="20.000000" precipitation="0.000000" precipitation_deposits="50.000000" wind_intensity="0.350000" sun_azimuth_angle="270.000000" sun_altitude_angle="15.000000" fog_density="0.000000" fog_distance="0.000000" fog_falloff="0.000000" wetness="0.000000">
+    <waypoint x="188.40892028808594" y="32.814353942871094" yaw="120.48915100097656" z="0.0"/>
+    <waypoint x="31.782121658325195" y="152.89573669433594" yaw="-139.3173828125" z="0.0"/>
+    <waypoint x="278.382080078125" y="-121.28971099853516" yaw="292.2754821777344" z="0.09478636831045151"/>
+    <waypoint x="-134.37281799316406" y="251.13287353515625" yaw="39.89653015136719" z="41.59407043457031"/>
+    <waypoint x="493.22845458984375" y="-413.6042175292969" yaw="269.0738525390625" z="86.04890441894531"/>
+    </weather>
+  </route>
+</routes>
