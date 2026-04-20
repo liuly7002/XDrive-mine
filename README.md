@@ -86,7 +86,7 @@ Start the evaluation
 sh leaderboard/scripts/run_evaluation.sh
 ``` -->
 
-## Citation
+<!-- ## Citation
 
 If you find our repo or our paper useful, please use the following citation:
 
@@ -108,5 +108,5 @@ Our code is based on several repositories:
 - [Transfuser](https://github.com/autonomousvision/transfuser)
 - [Roach](https://github.com/zhejz/carla-roach)
 - [CARLA Leaderboard](https://github.com/carla-simulator/leaderboard)
-- [Scenario Runner](https://github.com/carla-simulator/scenario_runner)
+- [Scenario Runner](https://github.com/carla-simulator/scenario_runner) -->
 
