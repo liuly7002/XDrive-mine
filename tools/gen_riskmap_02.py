@@ -8,14 +8,16 @@ from tqdm import tqdm
 import json
 
 """
-Dense Risk Map Version
-======================
-相对于原始 polar-point 版本的改动：
-1. 不再生成离散极点；
-2. 改为在 bev 左半图上生成稠密网格（每个像素一个点）；
-3. 对整张稠密网格计算风险，输出 dense risk map；
-4. 可视化采用 heatmap overlay，而不是 scatter 点图；
-5. JSON 保存为 dense 2D risk map，而不是 25x36 的离散标签。
+Dense Risk Map Version (Re-designed Kernel)
+===========================================
+相对于原始版本的改动：
+1. 不再使用原始“单一椭圆高斯 + 航向差 + 车头sigmoid”形式；
+2. 改为“前后非对称双区风险核”：
+   - 前向区域扩散更远；
+   - 后向区域扩散更短；
+   - 加入侧向增强项；
+3. 航向项改为新的 sin^2(delta/2) 耦合形式；
+4. 保持 dense risk map 的整体生成、可视化和 JSON 保存流程不变。
 
 说明：
 - 如果你担心 192x192 太密、文件太大，可以把 USE_DOWNSAMPLED_GRID=True，
@@ -56,12 +58,72 @@ root_dirs = ["/home/liulei/ll/XDrive-mine/data/kuangshan_00"]
 # ]
 
 # ========================
-# 高斯核函数
+# 新型非对称风险核函数
 # ========================
-def gaussian_density(P, mu, Sigma_inv):
-    diff = P - mu
-    dist = np.einsum('...i,ij,...j->...', diff, Sigma_inv, diff)
-    return np.exp(-0.5 * dist)
+def asymmetric_dual_zone_risk(points, pos, yaw, Lpix, Wpix,
+                              lambda_front=1.0,
+                              lambda_rear=0.45,
+                              eta_lat=0.35):
+    """
+    新风险核：
+    1) 前向区域和后向区域分别建模
+    2) 前后纵向扩散不同
+    3) 额外加入侧向增强项
+
+    参数:
+        points: (N, 2)
+        pos: (2,)
+        yaw: float
+        Lpix, Wpix: 车辆在 BEV 中的长度宽度尺度
+    返回:
+        risk_kernel: (N,)
+    """
+    rel = points - pos
+
+    c, s = np.cos(yaw), np.sin(yaw)
+
+    # 车辆前向单位向量
+    e_parallel = np.array([c, s], dtype=np.float32)
+    # 车辆横向单位向量
+    e_perp = np.array([-s, c], dtype=np.float32)
+
+    # 局部坐标
+    d_parallel = rel @ e_parallel
+    d_perp = rel @ e_perp
+
+    # 前向区域：沿车头方向扩散更远
+    sigma_f_parallel = max(1e-3, 1.8 * Lpix)
+    sigma_f_perp     = max(1e-3, 1.15 * Wpix)
+
+    # 后向区域：纵向扩散更短，表示车尾影响衰减更快
+    sigma_r_parallel = max(1e-3, 0.8 * Lpix)
+    sigma_r_perp     = max(1e-3, 0.95 * Wpix)
+
+    front_mask = (d_parallel >= 0).astype(np.float32)
+    rear_mask  = 1.0 - front_mask
+
+    front_risk = np.exp(
+        -0.5 * (
+            (d_parallel ** 2) / (sigma_f_parallel ** 2) +
+            (d_perp ** 2) / (sigma_f_perp ** 2)
+        )
+    )
+
+    rear_risk = np.exp(
+        -0.5 * (
+            (d_parallel ** 2) / (sigma_r_parallel ** 2) +
+            (d_perp ** 2) / (sigma_r_perp ** 2)
+        )
+    )
+
+    # 前后非对称组合
+    base_risk = lambda_front * front_mask * front_risk + lambda_rear * rear_mask * rear_risk
+
+    # 侧向增强：强调车辆两侧邻域的风险带
+    sigma_lat = max(1e-3, 1.4 * Wpix)
+    lateral_boost = 1.0 + eta_lat * np.exp(-0.5 * (d_perp ** 2) / (sigma_lat ** 2))
+
+    return base_risk * lateral_boost
 
 
 # ========================
@@ -131,7 +193,7 @@ def compute_dense_risk_with_multi_frames(points, vehicles_frames, ego_yaw, weigh
     - vehicles_frames: list，长度 T，每个元素是某一帧的车辆信息列表
     - ego_yaw: float，自车航向角
     - weights: list 或 np.ndarray，长度 T，时间权重
-    - scale: float，高斯缩放参数
+    - scale: float，风险核尺度参数
     返回:
     - risks: np.ndarray, (N,)
     """
@@ -154,9 +216,15 @@ def compute_dense_risk_with_multi_frames(points, vehicles_frames, ego_yaw, weigh
 def compute_dense_risk_with_single_frame(points, vehicles_frame, ego_yaw, alpha=0.5, scale=1.2, eps=1e-12):
     """
     对稠密二维坐标点计算风险值，考虑：
-    1) 椭圆高斯分布
-    2) ego vs 周车 航向角差
-    3) 车头方向加权
+    1) 前后非对称双区风险核
+    2) ego vs 周车 航向角差耦合
+    3) 侧向增强项
+
+    参数:
+    - points: (N,2)
+    - vehicles_frame: 当前帧所有车辆信息
+    - ego_yaw: float
+    - scale: 风险场整体缩放
     """
     N = points.shape[0]
     if len(vehicles_frame) == 0:
@@ -179,37 +247,33 @@ def compute_dense_risk_with_single_frame(points, vehicles_frame, ego_yaw, alpha=
         back_offset = 10
         yaw_thresh = np.pi / 12
 
-        # 这里沿用你原代码中的逻辑
         if abs((yaw_j - ego_yaw_val) % (2 * np.pi) - np.pi) < yaw_thresh:
             if abs(x_pix - ego_x) < lane_thresh_x:
                 if y_pix > ego_y + back_offset:
                     continue
 
-        # 高斯核参数
-        Lpix, Wpix = max(1e-3, L_pix * scale), max(1e-3, W_pix * scale)
-        Lambda = np.diag([Lpix ** 2, Wpix ** 2])
-        R = np.array([
-            [np.cos(yaw_j), -np.sin(yaw_j)],
-            [np.sin(yaw_j),  np.cos(yaw_j)]
-        ], dtype=np.float32)
+        # 新型非对称风险核参数
+        Lpix = max(1e-3, L_pix * scale)
+        Wpix = max(1e-3, W_pix * scale)
 
-        Sigma_inv = np.linalg.inv(R @ Lambda @ R.T)
+        # 1) 非对称双区风险核
+        g_new = asymmetric_dual_zone_risk(
+            points=points,
+            pos=pos,
+            yaw=yaw_j,
+            Lpix=Lpix,
+            Wpix=Wpix,
+            lambda_front=1.0,
+            lambda_rear=0.45,
+            eta_lat=0.35
+        )
 
-        g = gaussian_density(points, pos, Sigma_inv)
-
-        # 航向角差
+        # 2) 新的航向耦合项
         delta = ego_yaw - yaw_j
-        orient = 1.0 + (1.0 - np.cos(delta)) / 2.0
+        orient_coupling = 1.0 + 0.8 * (np.sin(delta / 2.0) ** 2)
 
-        # 车头方向加权
-        beta = 0.2
-        rel = points - pos
-        forward = np.array([np.cos(yaw_j), np.sin(yaw_j)], dtype=np.float32)
-        proj = rel @ forward
-        sigmoid = 1.0 / (1.0 + np.exp(-proj / (Lpix * 0.5)))
-        head_weight = beta + (1 - beta) * sigmoid
-
-        P += g * orient * head_weight
+        # 3) 最终叠加
+        P += g_new * orient_coupling
 
     if SingleFrame:
         P = P / (P.max() + eps)
@@ -289,7 +353,6 @@ def process_one(
     # =========================
     # 3) 后处理
     # =========================
-    # 3.1 如果输出分辨率与 bev_left 一致，则直接按像素掩膜后处理
     if (out_h == H_left) and (out_w == W_left):
         risks_clamped = risk_map.copy()
 
@@ -298,8 +361,6 @@ def process_one(
         risks_clamped[background_mask] = 1.0
 
         risk_map = risks_clamped
-
-    # 3.2 如果输出是降采样网格，则按采样点位置做掩膜后处理
     else:
         risks_clamped = risks.copy()
         for i, (px, py) in enumerate(grid_points.astype(int)):
@@ -318,8 +379,6 @@ def process_one(
         # ---- 4.1 在 bev_left 上保存 dense heatmap overlay ----
         fig, ax = plt.subplots(figsize=(5, 5))
         ax.imshow(bev_left)
-
-        # 若输出分辨率不是原图大小，用 extent 映射回 bev_left 坐标系
         ax.imshow(
             risk_map,
             cmap=cmap,
@@ -357,7 +416,6 @@ def process_one(
             meters_per_pix_rgb = (2.0 * R_rgb) / W_rgb
             ego_x_rgb, ego_y_rgb = W_rgb / 2.0, H_rgb / 2.0
 
-            # 生成 risk_map 对应的像素网格
             if USE_DOWNSAMPLED_GRID:
                 xs = np.linspace(0, W_left - 1, out_w)
                 ys = np.linspace(0, H_left - 1, out_h)
@@ -379,14 +437,10 @@ def process_one(
             x_rgb = ego_x_rgb + offset_rgb_x
             y_rgb = ego_y_rgb + offset_rgb_y
 
-            # 这里只做简单的 imshow 覆盖
             fig = plt.figure(figsize=(W_rgb / 100.0, H_rgb / 100.0), dpi=100)
             ax = fig.add_axes([0.0, 0.0, 1.0, 1.0])
             ax.imshow(bev_rgb_img)
 
-            # 为了简单稳定，直接按整幅图中心区域覆盖
-            # 因为严格的非线性映射/重采样会复杂很多
-            # 如果你后面需要，我可以再帮你改成严格插值映射版
             ax.imshow(
                 risk_map,
                 cmap=cmap,
