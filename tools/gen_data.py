@@ -379,7 +379,7 @@ if __name__ == '__main__':
             polarpoint_labels = []
             for seq in merged_data["front_img"]:  # front_img 里面是多帧 list
                 polar_seq = [
-                    p.replace("/rgb/", "/polarpoint_labels_25x36/").replace(".png", ".json")
+                    p.replace("/rgb/", "/polarpoint_labels_32x32/").replace(".png", ".json")
                     for p in seq
                 ]
                 polarpoint_labels.append(polar_seq)

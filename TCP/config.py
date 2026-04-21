@@ -9,8 +9,8 @@ class GlobalConfig:
 	# data root
 	root_dir_all = "./data"
 
-	train_towns = ['town01_addition']
-	val_towns   = ['town02_val']
+	train_towns = ['kuangshan_00']
+	val_towns   = ['kuangshan_00']
 	# train_towns = ['town01_original', 'town03_original', 'town04_original', 'town06_original', 'town07_original', 'town10_original']
 	# val_towns   = ['town02_val', 'town05_val']
 	train_data, val_data = [], []

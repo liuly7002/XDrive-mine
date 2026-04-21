@@ -47,19 +47,19 @@ def export_npy_to_csv(npy_file):
     print(f"✅ 导出成功: {csv_file}")
 
 if __name__ == "__main__":
-    root_dir = "/home/liulei/ll/PPBEV_ll/data/town02_val"   # ⚠️ 修改1
+    root_dir = "/home/liulei/ll/XDrive-mine/data/kuangshan_00"   # ⚠️ 修改1
 
     if SubfolderProcessing:
         for subdir in os.listdir(root_dir):
             folder_path = os.path.join(root_dir, subdir)
-            npy_file = os.path.join(folder_path, "packed_data_normal.npy")
+            npy_file = os.path.join(folder_path, "packed_data.npy")
             if os.path.isfile(npy_file):
                 try:
                     export_npy_to_csv(npy_file)
                 except Exception as e:
                     print(f"❌ 错误处理 {npy_file}: {e}")
     else:
-        npy_file = os.path.join(root_dir, "packed_data_normal.npy")
+        npy_file = os.path.join(root_dir, "packed_data.npy")
         if os.path.isfile(npy_file):
             try:
                 export_npy_to_csv(npy_file)

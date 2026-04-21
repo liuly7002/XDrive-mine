@@ -23,7 +23,7 @@ import json
 DEBUG = False           # DEBUG模式是示例(仅处理一张图像)
 index = 144             # DEBUG模式下需要处理的帧号
 SingleFrame = False     # True: 只根据当前帧来生成极点风险概率 False:根据当前帧和未来4帧融合来生成极点风险概率
-SaveImage = True        # 是否保存带有极点表示的BEV图
+SaveImage = False        # 是否保存带有极点表示的BEV图
 SaveJson  = True        # 是否保存极点标签为.json文件
 
 # 本地
@@ -391,7 +391,7 @@ def process_one(front_img_path, vehicles_info, ego_pos=(96, 152), ego_yaw=0.0, s
         ax.axis('off')  # 关闭坐标轴
         plt.colorbar(sc, fraction=0.03, pad=0.02)
         # 存图
-        save_dir = os.path.join(os.path.dirname(os.path.dirname(bev_path)), "bev_polarpoint_25x36")
+        save_dir = os.path.join(os.path.dirname(os.path.dirname(bev_path)), "bev_polarpoint_32x32")  # ⚠️ 修改: 保存的文件夹名称(每次修改这里)
         os.makedirs(save_dir, exist_ok=True)
         save_path = os.path.join(save_dir, os.path.basename(bev_path))
         plt.savefig(save_path, dpi=150)
@@ -469,7 +469,7 @@ def process_one(front_img_path, vehicles_info, ego_pos=(96, 152), ego_yaw=0.0, s
 
             bev_rgb_save_dir = os.path.join(
                 os.path.dirname(os.path.dirname(bev_rgb_path)),
-                "bev_rgb_polarpoint_25x36"
+                "bev_rgb_polarpoint_32x32"
             )
             os.makedirs(bev_rgb_save_dir, exist_ok=True)
             bev_rgb_save_path = os.path.join(

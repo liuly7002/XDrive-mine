@@ -85,22 +85,23 @@ routes_type = ["00"]        # ⚠️ 修改1
 towns = ["kuangshan"]       # ⚠️ 修改2
 result_path = "/home/liulei/ll/XDrive-mine/data"    # ⚠️ 修改3
 ```
-2.运行 tools 目录下的 gen_data.py 文件, 命令行如下:
+2.运行 tools 目录下的 gen_riskmap.py 文件, 命令行如下:
+```
+python tools/gen_riskmap.py
+```
+备注,需要修改的内容如下:
+```
+data_root = "/home/liulei/ll/XDrive-mine/data"
+root_dirs  = ["/home/liulei/ll/XDrive-mine/data/kuangshan_00"]   # ⚠️ 修改: 需要处理的文件夹(每次修改这里)
+```
+
+3.运行 tools 目录下的 gen_data.py 文件, 命令行如下:
 ```
 python tools/gen_data.py
 ```
 备注,需要修改的内容如下:
 ```
 data_path = "/home/liulei/ll/XDrive-mine/data/kuangshan_00"  # ⚠️ 修改: CARLA 数据集的根目录，每个 route 在该路径下一个子文件夹中。
-```
-3.运行 tools 目录下的 gen_polarpoint.py 文件, 命令行如下:
-```
-python tools/gen_polarpoint.py
-```
-备注,需要修改的内容如下:
-```
-data_root = "/home/liulei/ll/XDrive-mine/data"
-root_dirs  = ["/home/liulei/ll/XDrive-mine/data/kuangshan_00"]   # ⚠️ 修改: 需要处理的文件夹(每次修改这里)
 ```
 
 <!-- ## Evaluation

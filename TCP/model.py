@@ -52,7 +52,7 @@ class TCP(nn.Module):
 		if self.use_pp:
 			# ==== 最好效果 ====
 			self.polar_head = PolarPointHead(
-				in_ch=512, mid_ch=128, out_h=25, out_w=36,
+				in_ch=512, mid_ch=128, out_h=32, out_w=32,
 				use_block3=True,
 				use_block4=True,
 				use_res3=False,
