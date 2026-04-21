@@ -1,5 +1,5 @@
-> [!IMPORTANT]
-> 🌟 Stay up to date at [opendrivelab.com](https://opendrivelab.com/#news)!
+<!-- > [!IMPORTANT]
+> 🌟 Stay up to date at [opendrivelab.com](https://opendrivelab.com/#news)! -->
 
 # 露天矿山端到端自动驾驶算法基线
 
