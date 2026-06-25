@@ -454,7 +454,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 
 	parser.add_argument('--id', type=str, default='TCP', help='Unique experiment identifier.')
-	parser.add_argument('--epochs', type=int, default=60, help='Number of train epochs.')
+	parser.add_argument('--epochs', type=int, default=40, help='Number of train epochs.')
 	parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate.')
 	parser.add_argument('--val_every', type=int, default=2, help='Validation frequency (epochs).')
 	parser.add_argument('--batch_size', type=int, default=4, help='Batch size')
